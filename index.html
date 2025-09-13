@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Segment GOP Size Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #2c3041 0%, #57677d 100%)
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            font-weight: 300;
+        }
+
+        .params {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .param-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .param-label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .param-value {
+            font-size: 1.1em;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            color: #2d3748;
+            transition: border-color 0.2s ease;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        select:hover {
+            border-color: #cbd5e0;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #a9b1d2 0%, #94a4ba 100%)
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .results {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .gop-item {
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .gop-item:hover {
+            border-color: #667eea;
+            transform: scale(1.02);
+            background: linear-gradient(135deg, #667eea, #644bd5);
+            color: white;
+        }
+
+        .gop-number {
+            font-weight: 700;
+            font-size: 1.2em;
+            margin-bottom: 4px;
+        }
+
+        .gop-time {
+            font-size: 0.8em;
+            opacity: 0.8;
+            overflow-wrap: anywhere;
+        }
+
+        .explanation {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e6fffa;
+            border-radius: 10px;
+            border-left: 4px solid #5eaba7;
+        }
+
+        .formula {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Video Segment GOP Size Calculator</h1>
+        
+        <div class="params">
+            <div class="param-item">
+                <div class="param-label">Video Frame Rate</div>
+                <select id="frameRateSelect" onchange="onFrameRateChange()">
+                    <option value="15">15 fps</option>
+                    <option value="24000/1001">23.976 fps (24000/1001)</option>
+                    <option value="24">24 fps</option>
+                    <option value="25">25 fps (PAL)</option>
+                    <option value="30000/1001" selected>29.97 fps (30000/1001) - NTSC</option>
+                    <option value="30">30 fps</option>
+                    <option value="48">48 fps</option>
+                    <option value="50">50 fps</option>
+                    <option value="60000/1001">59.94 fps (60000/1001)</option>
+                    <option value="60">60 fps</option>
+                    <option value="120">120 fps</option>
+                </select>
+            </div>
+            <div class="param-item">
+                <div class="param-label">Audio Sample Rate</div>
+                <select id="audioSampleRateSelect" onchange="onAudioParameterChange()">
+                    <option value="8000">8,000 Hz</option>
+                    <option value="12000">12,000 Hz</option>
+                    <option value="16000">16,000 Hz</option>
+                    <option value="22050">22,050 Hz</option>
+                    <option value="24000">24,000 Hz</option>
+                    <option value="32000">32,000 Hz</option>
+                    <option value="44100">44,100 Hz</option>
+                    <option value="48000" selected>48,000 Hz</option>
+                    <option value="88200">88,200 Hz</option>
+                    <option value="96000">96,000 Hz</option>
+                </select>
+            </div>
+            <div class="param-item">
+                <div class="param-label">Audio Frames/Packet</div>
+                <select id="audioFramesPerPacketSelect" onchange="onAudioParameterChange()">
+                    <option value="960">960 frames</option>
+                    <option value="1024" selected>1,024 frames</option>
+                </select>
+            </div>
+            <div class="param-item">
+                <div class="param-label">Audio Packet Duration</div>
+                <div class="param-value" id="audioPacketDuration">21.33 ms</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="calculateGOPSizes()">Calculate First 20 Valid GOP Sizes</button>
+        </div>
+
+        <div class="results">
+            <h3 style="margin-top: 0; color: #4a5568;">Valid GOP Sizes (frames)</h3>
+            <div class="results-grid" id="resultsGrid">
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #a0aec0;">
+                    Click "Calculate" to generate GOP sizes
+                </div>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h3 style="margin-top: 0; color: #2d3748;">📚 How it works:</h3>
+            <p>This calculator finds GOP sizes where video frames align perfectly with audio packet boundaries to avoid audio/video sync issues.</p>
+            
+            <div class="formula">
+Audio packet duration = Audio Frames ÷ Sample Rate<br/>
+Video frame duration = 1 ÷ Frame Rate<br/>
+
+GOP duration = GOP_size × video_frame_duration<br/>
+Valid when: GOP_duration is multiple of audio_packet_duration
+            </div>
+
+            <p><strong>Why this matters:</strong> Proper alignment ensures smooth playback without audio dropouts or sync drift in streaming applications.</p>
+        </div>
+    </div>
+
+    <script>
+        // Video and audio parameters
+        let VIDEO_FPS = 30000 / 1001; // Default: Exact NTSC frame rate
+        let AUDIO_SAMPLE_RATE = 48000; // Default sample rate
+        let AUDIO_FRAMES_PER_PACKET = 1024; // Default frames per packet
+
+        // Calculate derived values (will be recalculated when parameters change)
+        let AUDIO_PACKET_DURATION = AUDIO_FRAMES_PER_PACKET / AUDIO_SAMPLE_RATE; // seconds
+        let VIDEO_FRAME_DURATION = 1 / VIDEO_FPS; // seconds
+
+        function updateAudioPacketDuration() {
+            AUDIO_PACKET_DURATION = AUDIO_FRAMES_PER_PACKET / AUDIO_SAMPLE_RATE;
+            document.getElementById('audioPacketDuration').textContent = 
+                (AUDIO_PACKET_DURATION * 1000) + ' ms';
+        }
+
+        function evaluateFrameRate(frameRateStr) {
+            // Handle fractional frame rates
+            if (frameRateStr.includes('/')) {
+                const [numerator, denominator] = frameRateStr.split('/');
+                return parseFloat(numerator) / parseFloat(denominator);
+            }
+            return parseFloat(frameRateStr);
+        }
+
+        function onFrameRateChange() {
+            const select = document.getElementById('frameRateSelect');
+            const frameRateStr = select.value;
+            
+            // Update global frame rate
+            VIDEO_FPS = evaluateFrameRate(frameRateStr);
+            VIDEO_FRAME_DURATION = 1 / VIDEO_FPS;
+            
+            // Recalculate and display results
+            calculateGOPSizes();
+        }
+
+        function onAudioParameterChange() {
+            // Update audio parameters from select boxes
+            AUDIO_SAMPLE_RATE = parseInt(document.getElementById('audioSampleRateSelect').value);
+            AUDIO_FRAMES_PER_PACKET = parseInt(document.getElementById('audioFramesPerPacketSelect').value);
+            
+            // Recalculate audio packet duration and update display
+            updateAudioPacketDuration();
+            
+            // Recalculate GOP sizes with new audio parameters
+            calculateGOPSizes();
+        }
+
+        function gcd(a, b) {
+            while (b !== 0) {
+                let temp = b;
+                b = a % b;
+                a = temp;
+            }
+            return a;
+        }
+
+        function lcm(a, b) {
+            return Math.abs(a * b) / gcd(a, b);
+        }
+
+        function isValidGOPSize(gopSize) {
+            // GOP duration in seconds
+            const gopDuration = gopSize * VIDEO_FRAME_DURATION;
+            
+            // Check if GOP duration is a multiple of audio packet duration
+            // We use a small epsilon for floating point comparison
+            const ratio = gopDuration / AUDIO_PACKET_DURATION;
+            const roundedRatio = Math.round(ratio);
+            const epsilon = 1e-10;
+            
+            return Math.abs(ratio - roundedRatio) < epsilon;
+        }
+
+        function calculateGOPSizes() {
+            const validGOPSizes = [];
+            let gopSize = 1;
+            
+            // Find first 20 valid GOP sizes
+            while (validGOPSizes.length < 20) {
+                if (isValidGOPSize(gopSize)) {
+                    validGOPSizes.push(gopSize);
+                }
+                gopSize++;
+                
+                // Safety break to prevent infinite loops
+                if (gopSize > 100000) {
+                    break;
+                }
+            }
+            
+            displayResults(validGOPSizes);
+        }
+
+        function displayResults(gopSizes) {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+            
+            gopSizes.forEach((gopSize, index) => {
+                const gopDuration = (gopSize * VIDEO_FRAME_DURATION * 1000); // milliseconds
+                
+                const gopItem = document.createElement('div');
+                gopItem.className = 'gop-item';
+                gopItem.innerHTML = `
+                    <div class="gop-number">${gopSize}</div>
+                    <div class="gop-time">${gopDuration}ms</div>
+                `;
+                
+                gopItem.addEventListener('click', () => {
+                    showGOPDetails(gopSize);
+                });
+                
+                resultsGrid.appendChild(gopItem);
+            });
+        }
+
+        function showGOPDetails(gopSize) {
+            const gopDurationMs = (gopSize * VIDEO_FRAME_DURATION * 1000);
+            const gopDurationSec = gopSize * VIDEO_FRAME_DURATION;
+            const audioPacketsPerGOP = Math.round(gopDurationSec / AUDIO_PACKET_DURATION);
+            const selectedFrameRate = document.getElementById('frameRateSelect').value;
+            const selectedSampleRate = document.getElementById('audioSampleRateSelect').value;
+            const selectedFramesPerPacket = document.getElementById('audioFramesPerPacketSelect').value;
+            
+            alert(`GOP Size: ${gopSize} frames
+Duration: ${gopDurationMs} ms (${gopDurationSec} seconds)
+Audio packets per GOP: ${audioPacketsPerGOP}
+Frame rate: ${selectedFrameRate} fps (${VIDEO_FPS})
+Audio: ${selectedSampleRate} Hz, ${selectedFramesPerPacket} frames/packet
+Perfect audio/video alignment: ✓`);
+        }
+
+        // Initialize audio packet duration display and calculate on page load
+        window.addEventListener('load', () => {
+            updateAudioPacketDuration();
+            setTimeout(calculateGOPSizes, 500);
+        });
+    </script>
+</body>
+</html>
