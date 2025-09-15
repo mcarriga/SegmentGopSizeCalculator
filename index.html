@@ -496,34 +496,34 @@ Valid when: GOP_duration is multiple of audio_packet_duration
                 <div class="drift-card">
                     <div class="drift-title">🔊 Audio Segment Analysis</div>
                     <div class="drift-value" style="color: #3182ce;">
-                        ${audioResults.actualPackets} packets = ${audioResults.adjustedDuration.toFixed(3)}s
+                        ${audioResults.actualPackets} packets = ${audioResults.adjustedDuration}s
                     </div>
                     <div class="drift-details">
-                        Target: ${audioResults.targetPackets.toFixed(1)} packets<br>
-                        Adjustment: ${audioResults.driftMs.toFixed(2)}ms
+                        Target: ${audioResults.targetPackets} packets<br>
+                        Adjustment: ${audioResults.driftMs}ms
                     </div>
                 </div>
 
                 <div class="drift-card">
                     <div class="drift-title">📹 Video Segment Analysis</div>
                     <div class="drift-value" style="color: #38a169;">
-                        ${videoResults.actualFrames} frames = ${videoResults.adjustedDuration.toFixed(3)}s
+                        ${videoResults.actualFrames} frames = ${videoResults.adjustedDuration}s
                     </div>
                     <div class="drift-details">
-                        Target: ${videoResults.targetFrames.toFixed(1)} frames<br>
-                        Adjustment: ${videoResults.driftMs.toFixed(2)}ms
+                        Target: ${videoResults.targetFrames} frames<br>
+                        Adjustment: ${videoResults.driftMs}ms
                     </div>
                 </div>
 
                 <div class="${driftClass}">
                     <div class="drift-title">${driftIcon} Audio/Video Drift Analysis</div>
                     <div class="drift-value" style="color: ${driftClass === 'drift-warning' ? '#e53e3e' : driftClass === 'drift-good' ? '#38a169' : '#4a5568'};">
-                        ${totalDriftMs.toFixed(2)}ms drift (${driftPercent.toFixed(2)}%)
+                        ${totalDriftMs}ms drift (${driftPercent.toFixed(2)}%)
                     </div>
                     <div class="drift-details">
                         ${driftStatus}<br>
-                        Audio duration: ${audioResults.adjustedDuration.toFixed(3)}s<br>
-                        Video duration: ${videoResults.adjustedDuration.toFixed(3)}s
+                        Audio duration: ${audioResults.adjustedDuration}s<br>
+                        Video duration: ${videoResults.adjustedDuration}s
                     </div>
                 </div>
 
@@ -540,8 +540,8 @@ Valid when: GOP_duration is multiple of audio_packet_duration
                         }
                         <br><br>
                         <strong>Suggested alternatives:</strong><br>
-                        Audio-aligned: ${audioResults.adjustedDuration.toFixed(3)}s<br>
-                        Video-aligned: ${videoResults.adjustedDuration.toFixed(3)}s
+                        Audio-aligned: ${audioResults.adjustedDuration}s<br>
+                        Video-aligned: ${videoResults.adjustedDuration}s
                     </div>
                 </div>
             `;
