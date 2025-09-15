@@ -109,6 +109,90 @@
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
         }
 
+        .segment-analysis {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .segment-input {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .segment-input input {
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 120px;
+            transition: border-color 0.2s ease;
+        }
+
+        .segment-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .segment-input button {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .segment-results {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #38b2ac;
+        }
+
+        .drift-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4299e1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .drift-warning {
+            border-left-color: #f56565;
+            background: #fed7d7;
+        }
+
+        .drift-good {
+            border-left-color: #48bb78;
+            background: #c6f6d5;
+        }
+
+        .drift-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drift-value {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        .drift-details {
+            font-size: 0.9em;
+            color: #4a5568;
+            margin-top: 8px;
+        }
+
         .results {
             background: #ffffff;
             border-radius: 12px;
@@ -267,6 +351,23 @@ Valid when: GOP_duration is multiple of audio_packet_duration
 
             <p><strong>Why this matters:</strong> Proper alignment ensures smooth playback without audio dropouts or sync drift in streaming applications.</p>
         </div>
+
+         <!-- Segment Duration Analysis Section -->
+        <div class="segment-analysis">
+            <h3 style="margin-top: 0; color: #4a5568;">📊 Segment Duration Analysis</h3>
+            <div class="segment-input">
+                <label for="segmentDurationInput" class="param-label">Target Segment Duration (seconds)</label>
+                <input type="number" id="segmentDurationInput" value="6.0" step="0.1" min="0.1" max="60" onchange="analyzeSegmentDuration()">
+                <button onclick="analyzeSegmentDuration()">Analyze Drift</button>
+            </div>
+            
+            <div id="segmentResults" class="segment-results">
+                <div style="text-align: center; padding: 20px; color: #a0aec0;">
+                    Enter a segment duration and click "Analyze Drift"
+                </div>
+            </div>
+        </div>
+        <!-- END Segment Duration Analysis Section -->
     </div>
 
     <script>
@@ -316,6 +417,134 @@ Valid when: GOP_duration is multiple of audio_packet_duration
             
             // Recalculate GOP sizes with new audio parameters
             calculateGOPSizes();
+        }
+
+        function analyzeSegmentDuration() {
+            const targetDuration = parseFloat(document.getElementById('segmentDurationInput').value);
+            
+            if (isNaN(targetDuration) || targetDuration <= 0) {
+                document.getElementById('segmentResults').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #e53e3e;">Please enter a valid segment duration</div>';
+                return;
+            }
+
+            // Calculate valid audio and video segment durations
+            const audioResults = calculateValidAudioSegment(targetDuration);
+            const videoResults = calculateValidVideoSegment(targetDuration);
+            
+            // Calculate drift between audio and video
+            const driftMs = Math.abs(audioResults.adjustedDuration - videoResults.adjustedDuration) * 1000;
+            const driftPercent = (driftMs / (targetDuration * 1000)) * 100;
+            
+            displaySegmentAnalysis(targetDuration, audioResults, videoResults, driftMs, driftPercent);
+        }
+
+        function calculateValidAudioSegment(targetDuration) {
+            // Find the closest number of audio packets that fits the target duration
+            const targetPackets = targetDuration / AUDIO_PACKET_DURATION;
+            const roundedPackets = Math.round(targetPackets);
+            const adjustedDuration = roundedPackets * AUDIO_PACKET_DURATION;
+            const driftMs = Math.abs(adjustedDuration - targetDuration) * 1000;
+            
+            return {
+                targetPackets: targetPackets,
+                actualPackets: roundedPackets,
+                adjustedDuration: adjustedDuration,
+                driftMs: driftMs
+            };
+        }
+
+        function calculateValidVideoSegment(targetDuration) {
+            // Find the closest number of frames that fits the target duration
+            const targetFrames = targetDuration / VIDEO_FRAME_DURATION;
+            const roundedFrames = Math.round(targetFrames);
+            const adjustedDuration = roundedFrames * VIDEO_FRAME_DURATION;
+            const driftMs = Math.abs(adjustedDuration - targetDuration) * 1000;
+            
+            return {
+                targetFrames: targetFrames,
+                actualFrames: roundedFrames,
+                adjustedDuration: adjustedDuration,
+                driftMs: driftMs
+            };
+        }
+
+        function displaySegmentAnalysis(targetDuration, audioResults, videoResults, totalDriftMs, driftPercent) {
+            const resultsDiv = document.getElementById('segmentResults');
+            
+            // Determine drift severity
+            let driftClass = 'drift-good';
+            let driftIcon = '✅';
+            let driftStatus = 'Excellent sync';
+            
+            if (totalDriftMs > 50) {
+                driftClass = 'drift-warning';
+                driftIcon = '⚠️';
+                driftStatus = 'Significant drift - may cause issues';
+            } else if (totalDriftMs > 20) {
+                driftClass = 'drift-card';
+                driftIcon = '⚡';
+                driftStatus = 'Minor drift - acceptable';
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="drift-card">
+                    <div class="drift-title">🎯 Target Segment Duration</div>
+                    <div class="drift-value" style="color: #4a5568;">${targetDuration.toFixed(3)} seconds</div>
+                </div>
+
+                <div class="drift-card">
+                    <div class="drift-title">🔊 Audio Segment Analysis</div>
+                    <div class="drift-value" style="color: #3182ce;">
+                        ${audioResults.actualPackets} packets = ${audioResults.adjustedDuration.toFixed(3)}s
+                    </div>
+                    <div class="drift-details">
+                        Target: ${audioResults.targetPackets.toFixed(1)} packets<br>
+                        Adjustment: ${audioResults.driftMs.toFixed(2)}ms
+                    </div>
+                </div>
+
+                <div class="drift-card">
+                    <div class="drift-title">📹 Video Segment Analysis</div>
+                    <div class="drift-value" style="color: #38a169;">
+                        ${videoResults.actualFrames} frames = ${videoResults.adjustedDuration.toFixed(3)}s
+                    </div>
+                    <div class="drift-details">
+                        Target: ${videoResults.targetFrames.toFixed(1)} frames<br>
+                        Adjustment: ${videoResults.driftMs.toFixed(2)}ms
+                    </div>
+                </div>
+
+                <div class="${driftClass}">
+                    <div class="drift-title">${driftIcon} Audio/Video Drift Analysis</div>
+                    <div class="drift-value" style="color: ${driftClass === 'drift-warning' ? '#e53e3e' : driftClass === 'drift-good' ? '#38a169' : '#4a5568'};">
+                        ${totalDriftMs.toFixed(2)}ms drift (${driftPercent.toFixed(2)}%)
+                    </div>
+                    <div class="drift-details">
+                        ${driftStatus}<br>
+                        Audio duration: ${audioResults.adjustedDuration.toFixed(3)}s<br>
+                        Video duration: ${videoResults.adjustedDuration.toFixed(3)}s
+                    </div>
+                </div>
+
+                <div class="drift-card" style="background: #e6fffa;">
+                    <div class="drift-title">💡 Recommendations</div>
+                    <div class="drift-details">
+                        ${totalDriftMs < 10 ? 
+                            'Perfect! This segment duration works well for demuxed A/V streaming.' :
+                            totalDriftMs < 25 ?
+                            'Good choice. Minor drift is acceptable for most streaming scenarios.' :
+                            totalDriftMs < 50 ?
+                            'Consider adjusting segment duration to reduce drift for better sync.' :
+                            'High drift detected. Consider using segment durations that align better with your frame rate and audio packet timing.'
+                        }
+                        <br><br>
+                        <strong>Suggested alternatives:</strong><br>
+                        Audio-aligned: ${audioResults.adjustedDuration.toFixed(3)}s<br>
+                        Video-aligned: ${videoResults.adjustedDuration.toFixed(3)}s
+                    </div>
+                </div>
+            `;
         }
 
         function gcd(a, b) {
@@ -405,7 +634,10 @@ Perfect audio/video alignment: ✓`);
         // Initialize audio packet duration display and calculate on page load
         window.addEventListener('load', () => {
             updateAudioPacketDuration();
-            setTimeout(calculateGOPSizes, 500);
+            setTimeout(() => {
+                calculateGOPSizes();
+                analyzeSegmentDuration(); // Also analyze default segment duration
+            }, 500);
         });
     </script>
 </body>
